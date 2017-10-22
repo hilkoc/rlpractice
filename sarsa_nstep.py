@@ -121,9 +121,11 @@ class SarsaNStepAgent(Agent):
             action = self.policy.select_action(q_values=q_values)
         else:
             action = self.test_policy.select_action(q_values=q_values)
-        if self.processor is not None:
-            action = self.processor.process_action(action)
-        assert action.shape == (self.nb_actions,)
+        # Don't process the action here. That happens later
+        # if self.processor is not None:
+        #     action = self.processor.process_action(action)
+
+        #print("sarsa_nstep.forward a = {}".format(str(action)))
         # Book-keeping.
         self.observations.append(observation)
         self.actions.append(action)

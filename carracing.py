@@ -29,19 +29,29 @@ ENV_NAME = 'CarRacing-v0'  # Has action space Box(3,)
 env = gym.make(ENV_NAME)
 np.random.seed(1234)
 env.seed(1234)
-nb_actions = env.action_space.shape[0]
-
-print("nb_actions %s" % nb_actions)
-print("imput dim %s" % str(env.observation_space.shape))
 
 class CarRacingProcessor(Processor):
-    def process_action(self, action):
+    """ We convert a discrete action into a continues one """
+
+    def __init__(self):
+        self.actions = list()
+        self.actions.append(np.array([0.,1.,0.]))  # full speed
+        self.actions.append(np.array([0., 0.5, 0.]))  # half speed
+        self.actions.append(np.array([-0.7, 0., 0.]))  # steer
+        self.actions.append(np.array([0.7, 0., 0.]))  # steer
+        self.actions.append(np.array([0., 0., 0.85]))  # brake
+
+    def process_action(self, raw_action):
         """Processes an action predicted by an agent but before execution in an environment. """
-        print("action is")
-        print(action)
-        return action
+        # print("raw_action is")
+        # print(raw_action)
+        return self.actions[raw_action]
 
 processor = CarRacingProcessor()
+
+nb_actions = len(processor.actions)
+print("nb_actions %s" % nb_actions)
+print("imput dim %s" % str(env.observation_space.shape))
 
 # Next, we build a very simple model.
 model = Sequential()
@@ -53,12 +63,12 @@ model.add(Activation('relu'))
 model.add(Dense(9))
 model.add(Activation('relu'))
 model.add(Dense(nb_actions))
-model.add(Activation('tanh'))
+model.add(Activation('linear'))
 print(model.summary())
 
-# SARSA does not require a memory.
-policy = EpsGreedyQPolicy()
-sarsa = SarsaNStepAgent(model=model, nb_actions=nb_actions, nb_steps_warmup=10, policy=policy, processor=None)
+
+policy = EpsGreedyQPolicy(eps=0.2)
+sarsa = SarsaNStepAgent(model=model, nb_actions=nb_actions, nb_steps_warmup=2, policy=policy, processor=processor)
 sarsa.compile(Adam(lr=1e-3), metrics=['mae'])
 
 # print("vout")
@@ -67,14 +77,14 @@ sarsa.compile(Adam(lr=1e-3), metrics=['mae'])
 # print(v_out)
 # print(v_out.shape)
 
-# sarsa.load_weights('sarsa_nstep_{}_weights.h5f'.format(ENV_NAME))
+sarsa.load_weights('sarsa_nstep_{}_weights.h5f'.format(ENV_NAME))
 # Okay, now it's time to learn something! We visualize the training here for show, but this
 # slows down training quite a lot. You can always safely abort the training prematurely using
 # Ctrl + C.
-sarsa.fit(env, nb_steps=1, action_repetition=10, visualize=False, verbose=2)
+sarsa.fit(env, nb_steps=50, action_repetition=5, visualize=False, verbose=2)
 
 # After training is done, we save the final weights.
 # sarsa.save_weights('sarsa_nstep_{}_weights.h5f'.format(ENV_NAME), overwrite=True)
 
 # Finally, evaluate our algorithm for 5 episodes.
-sarsa.test(env, nb_episodes=1, visualize=True)
+sarsa.test(env, nb_episodes=2, visualize=True)
