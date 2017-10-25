@@ -18,7 +18,7 @@ class SarsaNStepAgent(Agent):
     """ Semi Gradient n-step Sarsa implementation  """
 
     def __init__(self, model, nb_actions, policy=None, test_policy=None, gamma=.99, nb_steps_warmup=10,
-                 train_interval=1, delta_clip=np.inf, *args, **kwargs):
+                 train_interval=1, delta_clip=np.inf, n=4 *args, **kwargs):
         super(SarsaNStepAgent, self).__init__(*args, **kwargs)
 
         # Do not use defaults in constructor because that would mean that each instance shares the same
@@ -28,6 +28,7 @@ class SarsaNStepAgent(Agent):
         if test_policy is None:
             test_policy = GreedyQPolicy()
 
+        self.n = n
         self.model = model
         self.nb_actions = nb_actions
         self.policy = policy
