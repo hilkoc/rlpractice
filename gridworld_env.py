@@ -4,6 +4,8 @@ import numpy as np
 
 class GridWorld(gym.core.Env):
     """ A grid world environment """
+    metadata = {'render.modes': ['human']}
+
     MOVEMENTS = ['up', 'right', 'down', 'left']
     MOVE_VECS = [(0,-1), (1,0), (0,1), (-1,0)]
     CELL_VALUES = ['cliff', 'flat', 'agent', 'finish']
@@ -13,7 +15,7 @@ class GridWorld(gym.core.Env):
         self.STATE_H = 5
         self.STATE_W = 10
         self.action_space = Discrete(len(self.MOVEMENTS))
-        self.observation_space = Box(low=0, high=len(self.CELL_VALUES)-1, shape=(self.STATE_H, self.STATE_W, len(self.CELL_VALUES)))
+        self.observation_space = Box(low=0, high=len(self.CELL_VALUES), shape=(self.STATE_H, self.STATE_W))
         self.start_x, self.start_y = 1, 3
         self.finish_x, self.finish_y = 8, 4
         self.world = np.empty((self.STATE_H, self.STATE_W))
@@ -47,10 +49,11 @@ class GridWorld(gym.core.Env):
         self.world[self.start_y][self.start_x] = self.CELL_VALUES.index('agent')
         self.world[self.finish_y][self.finish_x] = self.CELL_VALUES.index('finish')
         cliff_idx = self.CELL_VALUES.index('cliff')
-        self.world[3, 1:8] = cliff_idx
+        self.world[3, 2:8] = cliff_idx
         self.world[4, self.start_x + 1] = cliff_idx
         # Move agent back to the start
         self.agent_x, self.agent_y = self.start_x, self.start_y
+        return self.world
 
     def _render(self, mode='human', close=False):
         """ Print the world to stdout"""
