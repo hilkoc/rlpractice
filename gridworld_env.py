@@ -27,13 +27,13 @@ class GridWorld(gym.core.Env):
         dx, dy = self.MOVE_VECS[action]
         self.agent_y += dy
         self.agent_x += dx
-        if 0 <= self.agent_y <= self.STATE_H and 0 <= self.agent_x <= self.STATE_W:
+        if 0 <= self.agent_y < self.STATE_H and 0 < self.agent_x <= self.STATE_W:
             reward = -1
             done = False
             if self.agent_y == self.finish_y and self.agent_x == self.finish_x:
                 reward = 1
                 done = True
-            elif self.world[self.agent_y][self.agent_x] == self.CELL_VALUES.index('cliff'):
+            elif self.world[self.agent_y, self.agent_x] == self.CELL_VALUES.index('cliff'):
                 reward = -100
                 done = True
             self.world[self.agent_y][self.agent_x] = self.CELL_VALUES.index('agent')
