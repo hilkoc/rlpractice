@@ -20,6 +20,10 @@ class RlAgent(object):
     def save_weights(self, filename):
         pass
 
+    def total_reward(self):
+        """ Returns total reward for the last episode. Used for measuring performance."""
+        raise NotImplementedError()
+
 
 class Environment(object):
     """ Runs sessions and episodes. A session is a number of episodes.
@@ -34,15 +38,21 @@ class Environment(object):
         self.agent = agent
 
     def run_session(self, nr_episodes=1):
+        """
+        :param nr_episodes: integer
+        :return: The average total reward per episode for this session
+        """
+        session_reward = 0
         env, agent = self.env, self.agent
         for i in range(nr_episodes):
             # LOG(INFO) << "Starting episode " << episode_nr;
+            print("\nEpisode %i" % i)
             # Stats episode_stats;
             t = 0
             state = env.reset()
             done = False
             while not done:
-                if t%11 ==10:
+                if t % 12 == 13:
                     print("Rendering State:")
                     env.render()
                 action = agent.receive_state(state)
@@ -50,8 +60,10 @@ class Environment(object):
                 # print("Action: %s Reward: %s" % (str(action),str(reward)))
                 agent.receive_reward(reward, done)
                 t += 1
+                session_reward += reward
             # this->finalize_episode(episode_nr, episode_stats, session_stats);
         # session_stats.log_summary();
+        return session_reward / nr_episodes
 
 
 ###########################
@@ -60,6 +72,7 @@ class Environment(object):
 
 class FixedGridworldAgent(RlAgent):
     """ An agent for the gridworld with fixed behavior. Total steps 12, total reward -10"""
+
     def __init__(self):
         self.turn = 0
         self.actions = [0, 0] + [1] * 7 + [2] * 3
@@ -84,9 +97,13 @@ class FixedGridworldAgent(RlAgent):
             self._reset()
 
 
+
 import numpy as np
+
+
 class TabularSarsa(RlAgent):
     """ An agent that learns from total reward accumulated over n-steps"""
+
     def __init__(self, n, observation_space, action_space, eps=0.1, gamma=0.9, alpha=0.3):
         self.n = n
         self._reset()
@@ -99,15 +116,15 @@ class TabularSarsa(RlAgent):
         self.alpha = alpha
         # specific to this gridworld env
         self.my_value = gridworld_env.GridWorld.CELL_VALUES.index('agent')
-        print("qvalues shape %s"  % str(self.qvalues.shape))
+        print("qvalues shape %s" % str(self.qvalues.shape))
 
     def _reset(self):
-        self.states = []  #Instead of the whole state, we just store the current location here
+        self.states = []  # Instead of the whole state, we just store the current location here
         self.actions = []
         self.rewards = [0]
-        self.turn = -1  # Start at -1 because we begin with increment
-        self.update_time = -1 -self.n
-        self.end_time = float('inf')  #infinity
+        self.turn = 0
+        self.update_time = -self.n -1 # To update we need S_tau+n, which is available at tau +n + 1
+        self.end_time = float('inf')  # infinity
 
     def receive_state(self, state):
         """ Instead of the whole state, we just store the current location """
@@ -130,15 +147,14 @@ class TabularSarsa(RlAgent):
         if terminal:
             print("Done, total reward %f" % sum(self.rewards))
             print("Path %s" % str(self.actions))
-            print("Last position %s:%s", self.states[-1])
-            print()
+            # print("Last position %s:%s", self.states[-1])
             self.end_time = self.turn
             if self.update_time < 0:
                 self.update_time = 0
             # continue learning the last rewards for T-n to T-1
             while self.update_time < self.end_time:
                 self._learn_reward(reward)
-                self.update_time +=1
+                self.update_time += 1
             self._reset()
         elif self.update_time >= 0:
             self._learn_reward(reward)
@@ -155,17 +171,13 @@ class TabularSarsa(RlAgent):
             action = self.action_space.sample()  # np.random.random_integers(0, nb_actions-1)
         else:
             action = np.argmax(q_values)  # The index of the action equals the action itself
-
-        # Debug fix actions
-        # acts = [0, 2, 3, 2, 2]
-        # action = acts[self.turn]
         return action
 
     def _learn_reward(self, reward):
         """ Improve the qvalues learned using the given reward"""
         # G = sum_{i=0 to n-1}  gamma^i * R_i + gamma^n * qvalue(state, action at time t+n)
         # New qvalue = old qvalue  +  alpha * ( G - old qvalue)
-        assert self.update_time >=0
+        assert self.update_time >= 0
 
         discounted_rewards = 0.0
         for i in range(min(self.n, self.end_time - self.update_time)):
@@ -173,19 +185,26 @@ class TabularSarsa(RlAgent):
 
         G = discounted_rewards
         s, a = 0, 0
-        if self.update_time + self.n < self.end_time:
-            s = self.states[self.turn]
-            a = self.actions[self.turn]
-            q_estimate = self.qvalues[s, a]
+        # debug = (len(self.states), len(self.actions), len(self.rewards))
+        t = self.update_time + self.n
+        if t < self.end_time:
+            s = self.states[t]
+            a = self.actions[t]
+            q_estimate = self.qvalues[s[0][0], s[1][0], a]
             G += self.gamma_pow[self.n] * q_estimate
 
         s = self.states[self.update_time]
         a = self.actions[self.update_time]
-        self.qvalues[s, a] += self.alpha * (G - self.qvalues[s, a])
+        old_qvalue = self.qvalues[s[0][0], s[1][0], a]
+        update = self.alpha * (G - old_qvalue)
+        self.qvalues[s[0][0], s[1][0], a] += self.alpha * (G - self.qvalues[s[0][0], s[1][0], a])
+        new_qvalue = self.qvalues[s[0][0], s[1][0], a]
+        # print("state %s, action %s, old_q %s, new_q %s" % (s, a, old_qvalue, new_qvalue))
+
 
     def load_weights(self, filename):
         import pickle
-        with open(filename,'rb') as f:
+        with open(filename, 'rb') as f:
             self.qvalues = pickle.load(f)
 
     def save_weights(self, filename):
@@ -193,16 +212,76 @@ class TabularSarsa(RlAgent):
         with open(filename, 'wb') as f:
             pickle.dump(self.qvalues, f)
 
+    def total_reward(self):
+        return sum(self.rewards)
 
-env = gridworld_env.GridWorld()
-# agent = FixedGridworldAgent()
-agent = TabularSarsa(12, env.observation_space, env.action_space, eps=0.1)
-filename = 'qvalues_gridworld.np'
-agent.load_weights(filename)
-environment = Environment(env)
-environment.add_agent(agent)
 
-environment.run_session(5000)
-agent.save_weights(filename)
-print("qvalues")
-print(agent.qvalues)
+def run_session(n, alpha):
+    env = gridworld_env.GridWorld()
+    # agent = FixedGridworldAgent()
+    agent = TabularSarsa(n, env.observation_space, env.action_space, eps=0.1, alpha=alpha)
+    filename = 'qvalues_gridworld-n{}-a{}.np'.format(n, alpha)
+    # agent.load_weights(filename)
+    environment = Environment(env)
+    environment.add_agent(agent)
+
+    nr_episodes = 500 # Train for 500 episodes, then reduce alpha by half
+    average_reward = environment.run_session(nr_episodes)
+    agent.alpha /= 2.0
+    average_reward = environment.run_session(nr_episodes)
+    agent.save_weights(filename)
+    print("Average training reward for {} episodes: {}".format(nr_episodes, average_reward))
+    nr_episodes = 10
+    average_reward = environment.run_session(nr_episodes)
+    print("Average value reward for {} episodes: {}".format(nr_episodes, average_reward))
+    return average_reward
+
+
+import matplotlib.pyplot as plt
+
+def figure7_2():
+    # all possible steps
+    steps = [1,2,4,8,12]
+
+    # all possible alphas
+    alphas = np.arange(0.1, 0.7, 0.1)
+
+    # perform 100 independent runs
+    runs = 1
+
+    # track the errors for each (step, alpha) combination
+    errors = np.zeros((len(steps), len(alphas)))
+    for run in range(0, runs):
+        for stepInd, step in zip(range(len(steps)), steps):
+            for alphaInd, alpha in zip(range(len(alphas)), alphas):
+                print('step:', step, 'alpha:', alpha)
+                value = run_session(step, alpha)
+                errors[stepInd, alphaInd] += value
+
+    plt.figure()
+    for i in range(0, len(steps)):
+        plt.plot(alphas, errors[i, :], label='n = ' + str(steps[i]))
+    plt.xlabel('alpha')
+    plt.ylabel('value')
+    plt.legend()
+    # plt.show()
+
+# figure7_2()
+
+def run_deterministic():
+    """ Run with alpha=0, eps=0 """
+    n=12
+    alpha='0.2'
+    filename = 'qvalues_gridworld-n{}-a{}.np'.format(n, alpha)
+    env = gridworld_env.GridWorld()
+    agent = TabularSarsa(n, env.observation_space, env.action_space, eps=0.0, alpha=0)
+    agent.load_weights(filename)
+    environment = Environment(env)
+    environment.add_agent(agent)
+
+    nr_episodes = 1 # Train for 500 episodes, then reduce alpha by half
+    average_reward = environment.run_session(nr_episodes)
+    print('average_reward', average_reward, 'n', n, 'alpha', alpha)
+
+
+run_deterministic()
