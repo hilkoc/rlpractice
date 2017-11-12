@@ -40,30 +40,32 @@ class Environment(object):
     def run_session(self, nr_episodes=1):
         """
         :param nr_episodes: integer
-        :return: The average total reward per episode for this session
+        :return: A map showing total reward for best episodes during this session
         """
-        session_reward = 0
+        performance = dict()
+        best = -float('inf')
         env, agent = self.env, self.agent
         for i in range(nr_episodes):
             # LOG(INFO) << "Starting episode " << episode_nr;
             print("\nEpisode %i" % i)
             # Stats episode_stats;
             t = 0
+            episode_reward =0
             state = env.reset()
             done = False
             while not done:
-                if t % 12 == 13:
-                    print("Rendering State:")
-                    env.render()
                 action = agent.receive_state(state)
                 state, reward, done, _ = env.step(action)
                 # print("Action: %s Reward: %s" % (str(action),str(reward)))
                 agent.receive_reward(reward, done)
                 t += 1
-                session_reward += reward
+                episode_reward += reward
             # this->finalize_episode(episode_nr, episode_stats, session_stats);
+            if episode_reward >= best:
+                best = episode_reward
+                performance[i] = best
         # session_stats.log_summary();
-        return session_reward / nr_episodes
+        return performance
 
 
 ###########################
@@ -216,20 +218,20 @@ class TabularSarsa(RlAgent):
         return sum(self.rewards)
 
 
-def run_session(n, alpha):
+def run_session(n, alpha, gamma=0.9):
     env = gridworld_env.GridWorld()
     # agent = FixedGridworldAgent()
-    agent = TabularSarsa(n, env.observation_space, env.action_space, eps=0.1, alpha=alpha)
+    agent = TabularSarsa(n, env.observation_space, env.action_space, eps=0.1, alpha=alpha, gamma=gamma)
     filename = 'qvalues_gridworld-n{}-a{}.np'.format(n, alpha)
     # agent.load_weights(filename)
     environment = Environment(env)
     environment.add_agent(agent)
 
     nr_episodes = 500 # Train for 500 episodes, then reduce alpha by half
+    #average_reward = environment.run_session(nr_episodes)
+    #agent.alpha /= 2.0
     average_reward = environment.run_session(nr_episodes)
-    agent.alpha /= 2.0
-    average_reward = environment.run_session(nr_episodes)
-    agent.save_weights(filename)
+    #agent.save_weights(filename)
     print("Average training reward for {} episodes: {}".format(nr_episodes, average_reward))
     nr_episodes = 10
     average_reward = environment.run_session(nr_episodes)
@@ -279,9 +281,59 @@ def run_deterministic():
     environment = Environment(env)
     environment.add_agent(agent)
 
-    nr_episodes = 1 # Train for 500 episodes, then reduce alpha by half
+    nr_episodes = 1
     average_reward = environment.run_session(nr_episodes)
     print('average_reward', average_reward, 'n', n, 'alpha', alpha)
 
 
-run_deterministic()
+def map_to_plot(map):
+    sorted_keys = sorted(map.keys())
+    xv, yv = sorted_keys, [map[k] for k in sorted_keys]
+    return xv, yv
+
+def get_performance(nr_episodes, n, alpha, gamma=0.9):
+    env = gridworld_env.GridWorld()
+    # agent = FixedGridworldAgent()
+    agent = TabularSarsa(n, env.observation_space, env.action_space, eps=0.1, alpha=alpha, gamma=gamma)
+    # filename = 'qvalues_gridworld-n{}-a{}.np'.format(n, alpha)
+    # agent.load_weights(filename)
+    environment = Environment(env)
+    environment.add_agent(agent)
+
+    perf = environment.run_session(nr_episodes)
+    #agent.save_weights(filename)
+    time, best_reward = map_to_plot(perf)
+    return time, best_reward
+
+
+def plot_performance():
+    nr_episodes = 800
+
+    # all possible steps
+    steps = [4,10]
+
+    # all possible alphas
+    alphas = np.arange(0.15, 0.25, 0.1)
+
+    gammas = [0.99, 0.9, 0.8, 0.6, 0.5, 0.1]
+    plt.figure()
+    # for i in range(0, len(steps)):
+    plt.plot([1,nr_episodes], [-8, -8], label='best possible')
+
+    for n in steps:
+        for alpha in alphas:
+            for gamma in gammas:
+                print('step:', n, 'alpha:', alpha)
+                xv, yv = get_performance(nr_episodes, n, alpha, gamma)
+                plt.plot(xv, yv, label='n : {}, alpha : {}, gamma {}'.format(n, alpha, gamma))
+    plt.xlabel('time')
+    plt.ylabel('best reward')
+    plt.legend()
+    plt.show()
+
+
+
+
+# First episode of -8 is 359, with n=10, alpha=0.2, gamma=0.98
+plot_performance()
+#run_deterministic()

@@ -11,10 +11,14 @@ g_x = [g(x) for x in x_values]
 h_x = [-0.5 * x + 3 for x in x_values]
 
 pairs = dict()
-for x,y in enumerate(h_x):
-    pairs[x+100] = y
+for x, y in enumerate(h_x):
+    pairs[x - 5] = y +  0.2 * (x-5)**2
 
-print(pairs)
+pairs2 = dict()
+for x,y in enumerate(h_x):
+    pairs2[x+10] = y
+
+print(pairs2)
 
 def plot_it():
     plt.figure()
@@ -31,15 +35,21 @@ def plot_it():
     plt.show()
 
 def map_to_plot(map):
-    xv, yv = map.keys(), map.values()
+    sorted_keys = sorted(map.keys())
+    xv, yv = sorted_keys, [map[k] for k in sorted_keys]
     return xv, yv
 
 
-xv, yv = map_to_plot(pairs)
-print(type(xv))
-print(type(yv))
 
 # plot_it()
 plt.figure()
-plt.plot(*map_to_plot(pairs), label='the pairs')
+plt.scatter([2, 4, 6, 8], [11, 10, 6, 8], label='ordered')
+plt.scatter([2, 8, 6, 4], [10, 7, 5, 9], label='not ordered')
+
+plt.plot(*map_to_plot(pairs), label='pairs')
+plt.plot(*map_to_plot(pairs2), label='p2')
+x = [2, 8, 6, 4]  # data_dict.keys()
+y = [10,7, 5, 9]  # data_dict.values()
+# plt.scatter(x, y, label='scatter plt')
+plt.legend()
 plt.show()
