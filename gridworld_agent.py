@@ -1,3 +1,6 @@
+from cmath import polar
+
+import gym
 import gridworld_env
 
 
@@ -32,6 +35,7 @@ class Environment(object):
     def __init__(self, env):
         self.env = env
         self.agent = None
+        self.max_turns_per_episode = 50
 
     def add_agent(self, agent):
         # for now just a single agent environment
@@ -60,12 +64,49 @@ class Environment(object):
                 agent.receive_reward(reward, done)
                 t += 1
                 episode_reward += reward
+                if t >= self.max_turns_per_episode:
+                    done = True
             # this->finalize_episode(episode_nr, episode_stats, session_stats);
             if episode_reward >= best:
                 best = episode_reward
                 performance[i] = best
         # session_stats.log_summary();
         return performance
+
+
+class DiscretePolicySpace(gym.spaces.Discrete):
+    """ A finite set of policies """
+
+    def __init__(self, policies):
+        """ policies: a list of Policy objects. """
+        self.policies = policies
+        n = len(policies)
+        super(DiscretePolicySpace, self).__init__(n)
+
+    def sample(self):
+        """ Returns an index, not a policy."""
+        return np.random.randint(self.n)
+
+    def contains(self, x):
+        """ Expects x to be an index, not a policy. Checks if x is within range."""
+        if isinstance(x, int):
+            as_int = x
+        elif isinstance(x, (np.generic, np.ndarray)) and (
+                x.dtype.kind in np.typecodes['AllInteger'] and x.shape == ()):
+            as_int = int(x)
+        else:
+            return False
+        return as_int >= 0 and as_int < self.n
+
+    @property
+    def shape(self):
+        return ()
+
+    def __repr__(self):
+        return "DiscretePolicySpace(%d)" % self.policies
+
+    def __eq__(self, other):
+        return self.policies == other.policies
 
 
 ###########################
@@ -101,6 +142,43 @@ class FixedGridworldAgent(RlAgent):
 
 
 import numpy as np
+
+
+# Action space is a set of policies.
+
+class Policy(object):
+    """ The inteface for every policy. When implementing a policy the _select_action method must be overridden """
+
+    def _select_action(self, state):
+        raise NotImplementedError
+
+    def select_action(self, state):
+        return self._select_action(state)
+
+
+class ConstantPolicy(Policy):
+    """ The constant policy always returns the same action. """
+    def __init__(self, action):
+        self.action = action
+
+    def _select_action(self, state):
+        return self.action
+
+
+class ExamplePolicy(Policy):
+    """ The example policy returns actions made by another agent. """
+    def __init__(self, rlAgent):
+        self.agent = rlAgent
+
+    def _select_action(self, state):
+        return self.agent._choose_action(state)
+
+
+def make_constant_policy_space(discrete_action_space):
+    """ Creates a discrete policy space of constant policies. """
+    policies = [ConstantPolicy(a) for a in range(discrete_action_space.n)]
+    policy_space = DiscretePolicySpace(policies)
+    return policy_space
 
 
 class TabularSarsa(RlAgent):
@@ -170,9 +248,10 @@ class TabularSarsa(RlAgent):
         assert nb_actions == self.action_space.n
 
         if np.random.uniform() < self.eps:
-            action = self.action_space.sample()  # np.random.random_integers(0, nb_actions-1)
+            action_idx = self.action_space.sample()  # np.random.random_integers(0, nb_actions-1)
         else:
-            action = np.argmax(q_values)  # The index of the action equals the action itself
+            action_idx = np.argmax(q_values)  # The index of the action
+        action = self.action_space.policies[action_idx].select_action(my_location)
         return action
 
     def _learn_reward(self, reward):
@@ -218,10 +297,11 @@ class TabularSarsa(RlAgent):
         return sum(self.rewards)
 
 
-def run_session(n, alpha, gamma=0.9):
+def run_a_session(n, alpha, gamma=0.9):
     env = gridworld_env.GridWorld()
     # agent = FixedGridworldAgent()
-    agent = TabularSarsa(n, env.observation_space, env.action_space, eps=0.1, alpha=alpha, gamma=gamma)
+    policy_space = make_constant_policy_space(env.action_space)
+    agent = TabularSarsa(n, env.observation_space, policy_space, eps=0.1, alpha=alpha, gamma=gamma)
     filename = 'qvalues_gridworld-n{}-a{}.np'.format(n, alpha)
     # agent.load_weights(filename)
     environment = Environment(env)
@@ -257,7 +337,7 @@ def figure7_2():
         for stepInd, step in zip(range(len(steps)), steps):
             for alphaInd, alpha in zip(range(len(alphas)), alphas):
                 print('step:', step, 'alpha:', alpha)
-                value = run_session(step, alpha)
+                value = run_a_session(step, alpha)
                 errors[stepInd, alphaInd] += value
 
     plt.figure()
@@ -276,7 +356,8 @@ def run_deterministic():
     alpha='0.2'
     filename = 'qvalues_gridworld-n{}-a{}.np'.format(n, alpha)
     env = gridworld_env.GridWorld()
-    agent = TabularSarsa(n, env.observation_space, env.action_space, eps=0.0, alpha=0)
+    policy_space = make_constant_policy_space(env.action_space)
+    agent = TabularSarsa(n, env.observation_space, policy_space, eps=0.0, alpha=0)
     agent.load_weights(filename)
     environment = Environment(env)
     environment.add_agent(agent)
@@ -293,38 +374,63 @@ def map_to_plot(map):
 
 def get_performance(nr_episodes, n, alpha, gamma=0.9):
     env = gridworld_env.GridWorld()
-    # agent = FixedGridworldAgent()
-    agent = TabularSarsa(n, env.observation_space, env.action_space, eps=0.1, alpha=alpha, gamma=gamma)
+    policy_space = make_constant_policy_space(env.action_space)
+    agent = TabularSarsa(n, env.observation_space, policy_space, eps=0.1, alpha=alpha, gamma=gamma)
     # filename = 'qvalues_gridworld-n{}-a{}.np'.format(n, alpha)
     # agent.load_weights(filename)
     environment = Environment(env)
     environment.add_agent(agent)
 
     perf = environment.run_session(nr_episodes)
-    #agent.save_weights(filename)
+    # agent.save_weights(filename)
+    time, best_reward = map_to_plot(perf)
+    return time, best_reward
+
+
+def learn_from_example(nr_episodes, n, alpha, gamma=0.9):
+    env = gridworld_env.GridWorld()
+
+    #make the example policy
+    const_policy_space = make_constant_policy_space(env.action_space)
+    # alpha, gamma don't matter here, because this agent never learns. Just an example.
+    exampleAgent = TabularSarsa(n, env.observation_space, const_policy_space, eps=0, alpha=1, gamma=1)
+    filename = 'qvalues_gridworld_example.np'
+    exampleAgent.load_weights(filename)
+    examplePolicy = ExamplePolicy(exampleAgent)
+
+    policies = [ConstantPolicy(a) for a in range(env.action_space.n)]
+    policies.append(examplePolicy)
+    policy_space = DiscretePolicySpace(policies)
+
+    agent = TabularSarsa(n, env.observation_space, policy_space, eps=0.1, alpha=alpha, gamma=gamma)
+    # filename = 'qvalues_gridworld_learn_by_example.np'
+    # agent.load_weights(filename)
+    environment = Environment(env)
+    environment.add_agent(agent)
+
+    perf = environment.run_session(nr_episodes)
+    # agent.save_weights(filename)
     time, best_reward = map_to_plot(perf)
     return time, best_reward
 
 
 def plot_performance():
-    nr_episodes = 800
+    nr_episodes = 200
 
     # all possible steps
-    steps = [4,10]
+    steps = [2]
 
     # all possible alphas
-    alphas = np.arange(0.15, 0.25, 0.1)
+    alphas = [0.28]  #np.arange(0.25, 0.35, 0.1)
 
-    gammas = [0.99, 0.9, 0.8, 0.6, 0.5, 0.1]
+    gammas = [0.9]
     plt.figure()
-    # for i in range(0, len(steps)):
     plt.plot([1,nr_episodes], [-8, -8], label='best possible')
 
     for n in steps:
         for alpha in alphas:
             for gamma in gammas:
-                print('step:', n, 'alpha:', alpha)
-                xv, yv = get_performance(nr_episodes, n, alpha, gamma)
+                xv, yv = learn_from_example(nr_episodes, n, alpha, gamma)
                 plt.plot(xv, yv, label='n : {}, alpha : {}, gamma {}'.format(n, alpha, gamma))
     plt.xlabel('time')
     plt.ylabel('best reward')
@@ -332,8 +438,4 @@ def plot_performance():
     plt.show()
 
 
-
-
-# First episode of -8 is 359, with n=10, alpha=0.2, gamma=0.98
 plot_performance()
-#run_deterministic()
