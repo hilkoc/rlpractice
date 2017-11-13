@@ -162,6 +162,7 @@ class ConstantPolicy(Policy):
         self.action = action
 
     def _select_action(self, state):
+        # print('Constant policy returning: %d' % self.action)
         return self.action
 
 
@@ -171,7 +172,9 @@ class ExamplePolicy(Policy):
         self.agent = rlAgent
 
     def _select_action(self, state):
-        return self.agent._choose_action(state)
+        a = self.agent._choose_action(state)
+        # print('Exmple policy returning: %d' % a)
+        return a
 
 
 def make_constant_policy_space(discrete_action_space):
@@ -399,10 +402,10 @@ def learn_from_example(nr_episodes, n, alpha, gamma=0.9):
     examplePolicy = ExamplePolicy(exampleAgent)
 
     policies = [ConstantPolicy(a) for a in range(env.action_space.n)]
-    policies.append(examplePolicy)
+    policies.insert(0, examplePolicy)
     policy_space = DiscretePolicySpace(policies)
 
-    agent = TabularSarsa(n, env.observation_space, policy_space, eps=0.1, alpha=alpha, gamma=gamma)
+    agent = TabularSarsa(n, env.observation_space, policy_space, eps=0.15, alpha=alpha, gamma=gamma)
     # filename = 'qvalues_gridworld_learn_by_example.np'
     # agent.load_weights(filename)
     environment = Environment(env)
@@ -418,12 +421,12 @@ def plot_performance():
     nr_episodes = 200
 
     # all possible steps
-    steps = [2]
+    steps = [8]
 
     # all possible alphas
-    alphas = [0.28]  #np.arange(0.25, 0.35, 0.1)
+    alphas = [0.2]  #np.arange(0.25, 0.35, 0.1)
 
-    gammas = [0.9]
+    gammas = [0.8]
     plt.figure()
     plt.plot([1,nr_episodes], [-8, -8], label='best possible')
 
@@ -431,7 +434,7 @@ def plot_performance():
         for alpha in alphas:
             for gamma in gammas:
                 xv, yv = learn_from_example(nr_episodes, n, alpha, gamma)
-                plt.plot(xv, yv, label='n : {}, alpha : {}, gamma {}'.format(n, alpha, gamma))
+                plt.plot(xv, yv, label='n : {}, alpha : {}, gamma {}'.format(n, alpha, gamma), marker='*')
     plt.xlabel('time')
     plt.ylabel('best reward')
     plt.legend()
