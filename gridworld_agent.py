@@ -172,9 +172,9 @@ class ExamplePolicy(Policy):
         self.agent = rlAgent
 
     def _select_action(self, state):
-        a = self.agent._choose_action(state)
+        a = self.agent._choose_action_idx(state)
         # print('Exmple policy returning: %d' % a)
-        return a
+        return self.agent.action_for_idx(a, state)
 
 
 def make_constant_policy_space(discrete_action_space):
@@ -219,8 +219,27 @@ class TabularSarsa(RlAgent):
         assert my_location[0].shape == (1,)  # Check that we found something
         assert my_location[1].shape == (1,)
         self.states.append(my_location)
-        action = self._choose_action(my_location)
-        self.actions.append(action)
+        action_idx = self._choose_action_idx(my_location)
+        self.actions.append(action_idx)
+        action = self.action_for_idx(action_idx, my_location)
+        return action
+
+    def _choose_action_idx(self, my_location):
+        """ Epsilon greedy choose an action."""
+        q_values = self.qvalues[my_location]
+        # assert q_values.ndim == 1
+        # print("choose action from shape %s" % str(q_values.shape))
+        nb_actions = q_values.shape[1]
+        assert nb_actions == self.action_space.n
+
+        if np.random.uniform() < self.eps:
+            action_idx = self.action_space.sample()  # np.random.random_integers(0, nb_actions-1)
+        else:
+            action_idx = np.argmax(q_values)  # The index of the action
+        return action_idx
+
+    def action_for_idx(self, action_idx, my_location):
+        action = self.action_space.policies[action_idx].select_action(my_location)
         return action
 
     def receive_reward(self, reward, terminal):
@@ -241,21 +260,6 @@ class TabularSarsa(RlAgent):
             self._reset()
         elif self.update_time >= 0:
             self._learn_reward(reward)
-
-    def _choose_action(self, my_location):
-        """ Epsilon greedy choose an action."""
-        q_values = self.qvalues[my_location]
-        # assert q_values.ndim == 1
-        # print("choose action from shape %s" % str(q_values.shape))
-        nb_actions = q_values.shape[1]
-        assert nb_actions == self.action_space.n
-
-        if np.random.uniform() < self.eps:
-            action_idx = self.action_space.sample()  # np.random.random_integers(0, nb_actions-1)
-        else:
-            action_idx = np.argmax(q_values)  # The index of the action
-        action = self.action_space.policies[action_idx].select_action(my_location)
-        return action
 
     def _learn_reward(self, reward):
         """ Improve the qvalues learned using the given reward"""
@@ -278,7 +282,7 @@ class TabularSarsa(RlAgent):
             G += self.gamma_pow[self.n] * q_estimate
 
         s = self.states[self.update_time]
-        a = self.actions[self.update_time]
+        a = self.actions[self.update_time]  # a is the action_idx
         old_qvalue = self.qvalues[s[0][0], s[1][0], a]
         update = self.alpha * (G - old_qvalue)
         self.qvalues[s[0][0], s[1][0], a] += self.alpha * (G - self.qvalues[s[0][0], s[1][0], a])
@@ -418,15 +422,15 @@ def learn_from_example(nr_episodes, n, alpha, gamma=0.9):
 
 
 def plot_performance():
-    nr_episodes = 200
+    nr_episodes = 600
 
     # all possible steps
-    steps = [8]
+    steps = [10]
 
     # all possible alphas
-    alphas = [0.2]  #np.arange(0.25, 0.35, 0.1)
+    alphas = [0.15]  #np.arange(0.25, 0.35, 0.1)
 
-    gammas = [0.8]
+    gammas = [0.99, 0.9, 0.8, 0.1]
     plt.figure()
     plt.plot([1,nr_episodes], [-8, -8], label='best possible')
 
