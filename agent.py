@@ -40,13 +40,11 @@ class Environment(object):
     def run_session(self, nr_episodes=1):
         """
         :param nr_episodes: integer
-        :return: A map showing total reward for best episodes during this session
+        :return: A map showing the reward for each episode during this session
         """
         performance = dict()
-        best = -float('inf')
         env, agent = self.env, self.agent
         for i in range(nr_episodes):
-            # LOG(INFO) << "Starting episode " << episode_nr;
             print("\nEpisode %i" % i)
             # Stats episode_stats;
             t = 0
@@ -62,11 +60,8 @@ class Environment(object):
                 episode_reward += reward
                 if t >= self.max_turns_per_episode:
                     done = True
-            # this->finalize_episode(episode_nr, episode_stats, session_stats);
-            if episode_reward >= best:
-                best = episode_reward
-                performance[i] = best
-        # session_stats.log_summary();
+            performance[i] = episode_reward
+
         return performance
 
 

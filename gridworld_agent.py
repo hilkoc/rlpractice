@@ -343,4 +343,5 @@ def plot_performance():
     plt.show()
 
 
-plot_performance()
+if __name__ == "__main__":
+    plot_performance()
