@@ -1,61 +1,36 @@
 
-# coding: utf-8
-
-# # Evaluate Reinforcement Learning agents
-# For a given environment and agent, run a number of episodes to evaluate the performance.
-
-
-
 # imports
 import numpy as np
 import matplotlib.pyplot as plt
-#get_ipython().run_line_magic('matplotlib', '')
-# %matplotlib
-import gridworld_env
-import gridworld_agent
-from agent import Environment
+%matplotlib inline
 
-
+from envs.spot_env import SpotEnv
+from agents.random_agent import RandomAgent
+from session_runner import SessionRunner
 
 
 # The environment
-env = gridworld_env.GridWorld()
-
-
-
+env = SpotEnv()
 
 # The policy and the agent
-policy_space = gridworld_agent.make_constant_policy_space(env.action_space)
-alpha, gamma= 1, 0.9
-n = 5
-agent = gridworld_agent.TabularSarsa(n, env.observation_space, policy_space, eps=0.1, alpha=alpha, gamma=gamma)
-# filename = 'qvalues_gridworld-n{}-a{}.np'.format(n, alpha)
-# agent.load_weights(filename)
-
-
+agent = RandomAgent(env.action_space)
 
 
 # The agent
 
-
-
-
 # evaluate
 nr_episodes = 5 # Train for 5 episodes
 
-environment = Environment(env)
-environment.add_agent(agent)
-performance = environment.run_session(nr_episodes)
-
+runner = SessionRunner(env, agent)
+performance = runner.run_session(nr_episodes)
 
 
 
 
 # plot_performance
 plt.figure()
-plt.plot(performance.keys(), performance.values(), label='best possible')
-plt.xlabel('time')
-plt.ylabel('best reward')
+plt.plot(performance.keys(), performance.values(), label='performance')
+plt.xlabel('episode nr')
+plt.ylabel('reward')
 plt.legend()
 plt.show()
-

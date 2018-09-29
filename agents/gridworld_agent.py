@@ -1,13 +1,11 @@
-from cmath import polar
 
-import gym
 import gym.spaces
 class TestSpace(gym.spaces.Discrete):
     """ A finite set of policies """
-    
-print("het wrkt")
-from agent import RlAgent, Environment, DiscretePolicySpace
-import gridworld_env
+
+from agents.base_agent import RlAgent, DiscretePolicySpace
+from session_runner import SessionRunner
+import envs.gridworld_env
 import numpy as np
 
 ###########################
@@ -27,7 +25,7 @@ class FixedGridworldAgent(RlAgent):
         print("Done, total reward %d" % self.total_reward)
         self.total_reward = 0
 
-    def receive_state(self, state):
+    def act(self, state):
         """ The fixed agent always returns the same actions in the same order """
         print("Turn %d" % self.turn)
         action = self.actions[self.turn % self.total_steps]
@@ -96,7 +94,7 @@ class TabularSarsa(RlAgent):
         self.gamma_pow = np.power(self.gamma, range(self.n + 1))
         self.alpha = alpha
         # specific to this gridworld env
-        self.my_value = gridworld_env.GridWorld.CELL_VALUES.index('agent')
+        self.my_value = envs.gridworld_env.GridWorld.CELL_VALUES.index('agent')
         print("qvalues shape %s" % str(self.qvalues.shape))
 
     def _reset(self):
@@ -107,7 +105,7 @@ class TabularSarsa(RlAgent):
         self.update_time = -self.n -1 # To update we need S_tau+n, which is available at tau +n + 1
         self.end_time = float('inf')  # infinity
 
-    def receive_state(self, state):
+    def act(self, state):
         """ Instead of the whole state, we just store the current location """
         self.turn += 1
         self.update_time += 1
@@ -203,23 +201,22 @@ class TabularSarsa(RlAgent):
 
 
 def run_a_session(n, alpha, gamma=0.9):
-    env = gridworld_env.GridWorld()
+    env = envs.gridworld_env.GridWorld()
     # agent = FixedGridworldAgent()
     policy_space = make_constant_policy_space(env.action_space)
     agent = TabularSarsa(n, env.observation_space, policy_space, eps=0.1, alpha=alpha, gamma=gamma)
     filename = 'qvalues_gridworld-n{}-a{}.np'.format(n, alpha)
     # agent.load_weights(filename)
-    environment = Environment(env)
-    environment.add_agent(agent)
+    runner = SessionRunner(env, agent)
 
     nr_episodes = 500 # Train for 500 episodes, then reduce alpha by half
-    #average_reward = environment.run_session(nr_episodes)
+    #average_reward = SessionRunner.run_session(nr_episodes)
     #agent.alpha /= 2.0
-    average_reward = environment.run_session(nr_episodes)
+    average_reward = runner.run_session(nr_episodes)
     #agent.save_weights(filename)
     print("Average training reward for {} episodes: {}".format(nr_episodes, average_reward))
     nr_episodes = 10
-    average_reward = environment.run_session(nr_episodes)
+    average_reward = runner.run_session(nr_episodes)
     print("Average value reward for {} episodes: {}".format(nr_episodes, average_reward))
     return average_reward
 
@@ -260,15 +257,15 @@ def run_deterministic():
     n=12
     alpha='0.2'
     filename = 'qvalues_gridworld-n{}-a{}.np'.format(n, alpha)
-    env = gridworld_env.GridWorld()
+    env = envs.gridworld_env.GridWorld()
     policy_space = make_constant_policy_space(env.action_space)
     agent = TabularSarsa(n, env.observation_space, policy_space, eps=0.0, alpha=0)
     agent.load_weights(filename)
-    environment = Environment(env)
-    environment.add_agent(agent)
+    runner = SessionRunner(env)
+    runner.add_agent(agent)
 
     nr_episodes = 1
-    average_reward = environment.run_session(nr_episodes)
+    average_reward = SessionRunner.run_session(nr_episodes)
     print('average_reward', average_reward, 'n', n, 'alpha', alpha)
 
 
@@ -278,22 +275,21 @@ def map_to_plot(map):
     return xv, yv
 
 def get_performance(nr_episodes, n, alpha, gamma=0.9):
-    env = gridworld_env.GridWorld()
+    env = envs.gridworld_env.GridWorld()
     policy_space = make_constant_policy_space(env.action_space)
     agent = TabularSarsa(n, env.observation_space, policy_space, eps=0.1, alpha=alpha, gamma=gamma)
     # filename = 'qvalues_gridworld-n{}-a{}.np'.format(n, alpha)
     # agent.load_weights(filename)
-    environment = Environment(env)
-    environment.add_agent(agent)
+    runner = SessionRunner(env, agent)
 
-    perf = environment.run_session(nr_episodes)
+    perf = runner.run_session(nr_episodes)
     # agent.save_weights(filename)
     time, best_reward = map_to_plot(perf)
     return time, best_reward
 
 
 def learn_from_example(nr_episodes, n, alpha, gamma=0.9):
-    env = gridworld_env.GridWorld()
+    env = envs.gridworld_env.GridWorld()
 
     #make the example policy
     const_policy_space = make_constant_policy_space(env.action_space)
@@ -310,10 +306,9 @@ def learn_from_example(nr_episodes, n, alpha, gamma=0.9):
     agent = TabularSarsa(n, env.observation_space, policy_space, eps=0.15, alpha=alpha, gamma=gamma)
     # filename = 'qvalues_gridworld_learn_by_example.np'
     # agent.load_weights(filename)
-    environment = Environment(env)
-    environment.add_agent(agent)
+    runner = SessionRunner(env, agent)
 
-    perf = environment.run_session(nr_episodes)
+    perf = runner.run_session(nr_episodes)
     # agent.save_weights(filename)
     time, best_reward = map_to_plot(perf)
     return time, best_reward

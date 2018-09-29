@@ -4,7 +4,7 @@ class RlAgent(object):
     """ An agent interacts with the environment.
     Observes a state, takes an action and receives a reward. """
 
-    def receive_state(self, state):
+    def act(self, state):
         """ Observe the given state and react to it. Decide on an action to take and return it."""
         raise NotImplementedError()
 
@@ -22,47 +22,6 @@ class RlAgent(object):
     def total_reward(self):
         """ Returns total reward for the last episode. Used for measuring performance."""
         raise NotImplementedError()
-
-
-class Environment(object):
-    """ Runs sessions and episodes. A session is a number of episodes.
-    An episode is a number of steps, from reset untill done """
-
-    def __init__(self, env):
-        self.env = env
-        self.agent = None
-        self.max_turns_per_episode = 50
-
-    def add_agent(self, agent):
-        # for now just a single agent environment
-        self.agent = agent
-
-    def run_session(self, nr_episodes=1):
-        """
-        :param nr_episodes: integer
-        :return: A map showing the reward for each episode during this session
-        """
-        performance = dict()
-        env, agent = self.env, self.agent
-        for i in range(nr_episodes):
-            print("\nEpisode %i" % i)
-            # Stats episode_stats;
-            t = 0
-            episode_reward =0
-            state = env.reset()
-            done = False
-            while not done:
-                action = agent.receive_state(state)
-                state, reward, done, _ = env.step(action)
-                # print("Action: %s Reward: %s" % (str(action),str(reward)))
-                agent.receive_reward(reward, done)
-                t += 1
-                episode_reward += reward
-                if t >= self.max_turns_per_episode:
-                    done = True
-            performance[i] = episode_reward
-
-        return performance
 
 
 import gym.spaces
