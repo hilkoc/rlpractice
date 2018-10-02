@@ -13,7 +13,7 @@ class LinearSoftmaxPolicy(object):
     """ The inteface for every policy."""
 
     def __init__(self, theta1, theta2):
-        self.theta = np.array([theta1, theta2])
+        self.theta = np.array([theta1, theta2], 'float64')
 
     def policy_func(self, state):
         h1 = self.theta[0] - state
@@ -43,7 +43,7 @@ class LinearSoftmaxPolicy(object):
         grad_h2 = np.array([0, 0])
         grad_h3 = np.array([0, -1])
         g = self.policy_func(state)
-        sum_grad_h_g = grad_h1 * g[0] + grad_h2 * g[2] + grad_h3 * g[3]
+        sum_grad_h_g = grad_h1 * g[0] + grad_h2 * g[1] + grad_h3 * g[2]
         r = [grad_h1 - sum_grad_h_g,
              grad_h2 - sum_grad_h_g,
              grad_h3 - sum_grad_h_g]
@@ -60,27 +60,41 @@ class PolicyGradientAgent(agents.base_agent.RlAgent):
         self.gamma = gamma
         # self.gamma_pow = np.power(self.gamma, range(self.n + 1))
         self.alpha = alpha
+        self.policy = LinearSoftmaxPolicy(98, 101.1)
+        self.reset()
+
+    def reset(self):
         self.rewards = list()
         self.states = list()
-        self.policy = LinearSoftmaxPolicy(102, 100)
+        self.actions = list()
 
     def act(self, state):
         """ Observe the given state and react to it. Returns an action from the action space."""
-        self.states.append(state)
         action_idx = self.policy.select_action(state)
-        return self.action_space[action_idx]
+        self.states.append(state)
+        self.actions.append(action_idx)
+        return action_idx
 
     def receive_reward(self, reward, terminal):
         """ Receive the reward for the last action taken and boolean indicating whether the last state is terminal.
         The agent can use this to learn and adapt its behavior accordingly."""
         self.rewards.append(reward)
+        print("Received reward {}".format(reward))
         if terminal:
             G = 0
             T = len(self.rewards)
+            print("Terminal! {} and T = {}".format(terminal, T))
             for t in reversed(range(T)):
-                G += self.gamma * G + self.rewards[t]
-                theta_update = self.alpha * G * self.policy.grad_log(self.states[t])
+                G = self.gamma * G + self.rewards[t]
+                action_t = self.actions[t]
+                theta_update = self.alpha * G * self.policy.grad_log(self.states[t])[action_t]
+                print("Updating {} with {}".format(str(self.policy.theta), str(theta_update)))
                 self.policy.theta += theta_update
+                # For debugging
+                if 80 < theta_update[1]:
+                    raise "Theta exploding: G {} s {} a {}".format(G, self.states[t], self.actions[t])
+            # Reset for the next episode
+            self.reset()
 
     def load_weights(self, filename):
         pass

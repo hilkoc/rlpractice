@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 #%matplotlib inline
 
 from envs.spot_env import SpotEnv
-from agents.random_agent import RandomAgent
+from agents.policy_gradient_agent import PolicyGradientAgent
 from session_runner import SessionRunner
 
 
@@ -13,13 +13,14 @@ from session_runner import SessionRunner
 env = SpotEnv()
 
 # The policy and the agent
-agent = RandomAgent(env.action_space)
+# agent = RandomAgent(env.action_space)
+agent = PolicyGradientAgent(env.observation_space, env.action_space)
 
 
 # The agent
 
 # evaluate
-nr_episodes = 5 # Train for 5 episodes
+nr_episodes = 5
 
 runner = SessionRunner(env, agent)
 performance = runner.run_session(nr_episodes)

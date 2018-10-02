@@ -3,7 +3,7 @@ class SessionRunner(object):
     """ Runs sessions and episodes. A session is a number of episodes.
     An episode is a number of steps, from reset untill done. """
 
-    def __init__(self, env, agent, max_steps=50):
+    def __init__(self, env, agent, max_steps=5000):
         self.env = env
         self.agent = agent
         self.max_turns_per_episode = max_steps
@@ -18,10 +18,9 @@ class SessionRunner(object):
         env, agent = self.env, self.agent
         for i in range(nr_episodes):
             print("\nEpisode %i" % i)
-
-            t = 0
-            episode_reward =0
             state = env.reset()
+            episode_reward = 0
+            t = 0
             done = False
             while not done:
                 action = agent.act(state)
@@ -32,6 +31,7 @@ class SessionRunner(object):
                 episode_reward += reward
                 if t >= self.max_turns_per_episode:
                     done = True
+                    raise RuntimeError("Max steps exceeded: {}".format(t))
             performance[i] = episode_reward
 
         return performance

@@ -11,10 +11,10 @@ class SpotEnv(gym.core.Env):
     def __init__(self):
         super(SpotEnv, self).__init__()
         self.action_space = Discrete(len(self.ACTIONS))
-        self.observation_space = Box(low=-0, high=1000, shape=(1,))
+        self.observation_space = Box(low=0, high=1000, shape=(1,))
         self.MAX_STEPS = 35
-        self._reset()
         self.time = 0
+        self._reset()
 
     def _step(self, action):
         assert self.action_space.contains(action)
@@ -34,9 +34,11 @@ class SpotEnv(gym.core.Env):
         self.prev_balance = balance
         obs = spot
         reward = 100 * np.log(stepreturn)  # Return log, so rewards are additive
-        return (obs, reward, done, {})
+        return obs, reward, done, {}
 
     def _reset(self):
+        print("Reset at time was %i" % self.time)
+        self.time = 0
         self.start_spot = 100
         self.asset = 0.0
         self.cash = 100.0
