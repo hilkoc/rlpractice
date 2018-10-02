@@ -2,7 +2,7 @@
 # imports
 import numpy as np
 import matplotlib.pyplot as plt
-%matplotlib inline
+#%matplotlib inline
 
 from envs.spot_env import SpotEnv
 from agents.random_agent import RandomAgent

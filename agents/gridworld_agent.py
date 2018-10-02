@@ -42,7 +42,7 @@ class FixedGridworldAgent(RlAgent):
 
 # Action space is a set of policies.
 
-class Policy(object):
+class RlPolicy(object):
     """ The inteface for every policy. When implementing a policy the _select_action method must be overridden """
 
     def _select_action(self, state):
@@ -52,7 +52,7 @@ class Policy(object):
         return self._select_action(state)
 
 
-class ConstantPolicy(Policy):
+class ConstantPolicy(RlPolicy):
     """ The constant policy always returns the same action. """
     def __init__(self, action):
         self.action = action
@@ -62,7 +62,7 @@ class ConstantPolicy(Policy):
         return self.action
 
 
-class ExamplePolicy(Policy):
+class ExamplePolicy(RlPolicy):
     """ The example policy returns actions made by another agent. """
     def __init__(self, rlAgent):
         self.agent = rlAgent

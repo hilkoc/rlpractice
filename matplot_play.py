@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import math
 
 def g(x):
     return (x - 2) * (x - 5) * (x-8)
@@ -41,15 +42,45 @@ def map_to_plot(map):
 
 
 
-# plot_it()
-plt.figure()
-plt.scatter([2, 4, 6, 8], [11, 10, 6, 8], label='ordered')
-plt.scatter([2, 8, 6, 4], [10, 7, 5, 9], label='not ordered')
+def plot_it():
+    plt.figure()
+    plt.scatter([2, 4, 6, 8], [11, 10, 6, 8], label='ordered')
+    plt.scatter([2, 8, 6, 4], [10, 7, 5, 9], label='not ordered')
 
-plt.plot(*map_to_plot(pairs), label='pairs')
-plt.plot(*map_to_plot(pairs2), label='p2')
-x = [2, 8, 6, 4]  # data_dict.keys()
-y = [10,7, 5, 9]  # data_dict.values()
-# plt.scatter(x, y, label='scatter plt')
-plt.legend()
-plt.show()
+    plt.plot(*map_to_plot(pairs), label='pairs')
+    plt.plot(*map_to_plot(pairs2), label='p2')
+    x = [2, 8, 6, 4]  # data_dict.keys()
+    y = [10,7, 5, 9]  # data_dict.values()
+    # plt.scatter(x, y, label='scatter plt')
+    plt.legend()
+    plt.show()
+
+def plot_planet_values():
+    c1, c2 = 0, 0.3
+    def g(c, x):
+        v = 1 / (x-c)**2
+        return v
+
+    def n(c, x):
+        v = math.exp(-5 * (x-c)**2)
+        return v
+
+    f = g
+
+    x_values = [ -0.95 + i/10.0 for i in  range(0, 30)]
+    f1_x = [f(c1,x) for x in x_values]
+    f2_x = [f(c2, x) for x in x_values]
+    fsum = [ a+b for a,b in zip(f1_x, f2_x)]
+
+    plt.figure()
+    #for i in range(0, len(steps)):
+    plt.plot(x_values, f1_x, label='f(0,x)')
+    plt.plot(x_values, f2_x, label='f(10,x)')
+    plt.plot(x_values, fsum, label='som')
+    plt.xlabel('x')
+    plt.ylabel('f(x)')
+    plt.legend()
+    plt.show()
+
+
+plot_planet_values()
