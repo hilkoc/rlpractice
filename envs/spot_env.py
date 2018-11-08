@@ -12,7 +12,7 @@ class SpotEnv(gym.core.Env):
         super(SpotEnv, self).__init__()
         self.action_space = Discrete(len(self.ACTIONS))
         self.observation_space = Box(low=0, high=1000, shape=(1,))
-        self.MAX_STEPS = 35
+        self.MAX_STEPS = 124
         self.time = 0
         self._reset()
 
@@ -33,18 +33,18 @@ class SpotEnv(gym.core.Env):
         stepreturn = balance / self.prev_balance
         self.prev_balance = balance
         obs = spot
-        reward = 100 * np.log(stepreturn)  # Return log, so rewards are additive
+        reward = 10 * np.log(stepreturn)  # Return log, so rewards are additive
         return obs, reward, done, {}
 
     def _reset(self):
-        print("Reset at time was %i" % self.time)
+        # print("Reset at time was %i" % self.time)
         self.time = 0
         self.start_spot = 100
         self.asset = 0.0
         self.cash = 100.0
         self.prev_balance = self.current_value(self.start_spot)
         self.fee = 0.0  # percentage
-        self.vol = 8.0
+        self.vol = 11.0
         return self.start_spot
 
     def _render(self, mode='human', close=False):

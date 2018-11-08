@@ -14,13 +14,13 @@ env = SpotEnv()
 
 # The policy and the agent
 # agent = RandomAgent(env.action_space)
-agent = PolicyGradientAgent(env.observation_space, env.action_space)
+agent = PolicyGradientAgent(env.observation_space, env.action_space, alpha=0.040)
 
 
 # The agent
 
 # evaluate
-nr_episodes = 5
+nr_episodes = 1002
 
 runner = SessionRunner(env, agent)
 performance = runner.run_session(nr_episodes)
