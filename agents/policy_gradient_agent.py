@@ -1,6 +1,6 @@
 import agents.base_agent
 import numpy as np
-
+np.random.seed(0)
 
 class BasePolicy(object):
     """ The inteface for every policy."""
@@ -60,7 +60,7 @@ class PolicyGradientAgent(agents.base_agent.RlAgent):
         self.gamma = gamma
         # self.gamma_pow = np.power(self.gamma, range(self.n + 1))
         self.alpha = alpha
-        self.policy = LinearSoftmaxPolicy(95.1, 105.1)
+        self.policy = LinearSoftmaxPolicy(89.1, 111.1)
         self.reset()
 
     def reset(self):

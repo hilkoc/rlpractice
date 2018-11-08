@@ -43,7 +43,7 @@ class SpotEnv(gym.core.Env):
         self.asset = 0.0
         self.cash = 100.0
         self.prev_balance = self.current_value(self.start_spot)
-        self.fee = 0.0  # percentage
+        self.fee = 0.0016  # percentage
         self.vol = 11.0
         return self.start_spot
 
