@@ -13,12 +13,13 @@ class LinearSoftmaxPolicy(object):
     """ The inteface for every policy."""
 
     def __init__(self, theta0, theta1):
-        self.theta = np.array([theta0, theta1], 'float64')
+        self.theta = np.array([theta0, theta1, 5.0], 'float64')
 
     def policy_func(self, state):
-        h0 = self.theta[0] - state
-        h1 = 1 - self.theta[0] + self.theta[1]
-        h2 = -self.theta[1] + state
+        th2 = self.theta[2]
+        h0 = th2 * (self.theta[0] - state)
+        h1 = 0.0  #001 * th2 * (1 - self.theta[0] + self.theta[1])
+        h2 = th2 * (-self.theta[1] + state)
         h = np.array([h0,h1,h2])
         f = np.exp(h)
         denominator = sum(f)
@@ -39,9 +40,10 @@ class LinearSoftmaxPolicy(object):
         """ The gradient of the log of the policy_func,
             Returns a vector with len(theta) coordinates
             in a vector with coordinates for each action idx. """
-        grad_h0 = np.array([1, 0])
-        grad_h1 = np.array([-1, 1])
-        grad_h2 = np.array([0, -1])
+        th2 = self.theta[2]
+        grad_h0 = np.array([1 * th2, 0, self.theta[0] - state])
+        grad_h1 = np.array([0.0, 0.0, 0.0])
+        grad_h2 = np.array([0, -1 * th2, -self.theta[1] + state])
         g = self.policy_func(state)
         sum_grad_h_g = grad_h0 * g[0] + grad_h1 * g[1] + grad_h2 * g[2]
         r = [grad_h0 - sum_grad_h_g,
@@ -60,7 +62,7 @@ class PolicyGradientAgent(agents.base_agent.RlAgent):
         self.gamma = gamma
         # self.gamma_pow = np.power(self.gamma, range(self.n + 1))
         self.alpha = alpha
-        self.policy = LinearSoftmaxPolicy(89.1, 111.1)
+        self.policy = LinearSoftmaxPolicy(91.95142244, 108.04857756)
         self.reset()
 
     def reset(self):
@@ -87,8 +89,8 @@ class PolicyGradientAgent(agents.base_agent.RlAgent):
             for t in reversed(range(T)):
                 G = self.gamma * G + self.rewards[t]
                 action_t = self.actions[t]
-                theta_update = self.alpha * (G - 1.0) * self.policy.grad_log(self.states[t])[action_t]
-                # print("Updating {} with {}".format(str(self.policy.theta), str(theta_update)))
+                theta_update = self.alpha * (G - 0.0) * self.policy.grad_log(self.states[t])[action_t]
+                # print("G = {}. Updating {} with {}".format(G, str(self.policy.theta), str(theta_update)))
                 self.policy.theta += theta_update
                 # For debugging
                 if 80 < theta_update[1]:

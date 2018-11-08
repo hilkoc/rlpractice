@@ -33,7 +33,7 @@ class SessionRunner(object):
                 if t >= self.max_turns_per_episode:
                     done = True
                     raise RuntimeError("Max steps exceeded: {}".format(t))
-            if i % self.peek == 1:
+            if i % self.peek == 0:
                 print("\nEpisode %i" % i)
                 print(agent.policy.theta)
                 env.render()
