@@ -7,7 +7,6 @@ class SessionRunner(object):
         self.env = env
         self.agent = agent
         self.max_turns_per_episode = max_steps
-        self.peek = 50
 
 
     def run_session(self, nr_episodes=1):
@@ -17,6 +16,7 @@ class SessionRunner(object):
         """
         performance = dict()
         env, agent = self.env, self.agent
+        peek = nr_episodes//5 + 1
         for i in range(nr_episodes):
 
             state = env.reset()
@@ -33,7 +33,7 @@ class SessionRunner(object):
                 if t >= self.max_turns_per_episode:
                     done = True
                     raise RuntimeError("Max steps exceeded: {}".format(t))
-            if i % self.peek == 0:
+            if i % peek == 0:
                 print("\nEpisode %i" % i)
                 print(agent.policy.theta)
                 env.render()
