@@ -12,10 +12,8 @@ class SpotEnvAgent(agents.base_agent.RlAgent):
         avg, amp = spot_env.start_spot, spot_env.vol * np.cos(0.75)
         theta0 = avg - amp
         theta1 = avg + amp
-        self.theta = np.array([theta0, theta1])
-        policy = Dummy()
-        policy.theta = self.theta
-        self.policy = policy
+        self.policy = Dummy()
+        self.policy.theta = np.array([theta0, theta1, 1.0])
         self.reset()
 
     def reset(self):
