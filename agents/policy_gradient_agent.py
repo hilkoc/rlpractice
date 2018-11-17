@@ -38,10 +38,9 @@ class LinearSoftmaxPolicy(BasePolicy):
         g = self.policy_func(state)
         # return np.argmax(g)
         eps = np.random.random_sample() #Uniform in [0,1)
-        a1, a2 = g[0], g[0] + g[1]
-        if eps < a1:
+        if eps < g[0]:
             return 0
-        if eps < a2:
+        if eps < g[0] + g[1]:
             return 1
         return 2
 
@@ -71,7 +70,7 @@ class PolicyGradientAgent(agents.base_agent.RlAgent):
         self.gamma = gamma
         # self.gamma_pow = np.power(self.gamma, range(self.n + 1))
         self.alpha = alpha
-        self.policy = LinearSoftmaxPolicy(92.0, 108.0)
+        self.policy = LinearSoftmaxPolicy(99.0, 101.0)
         self.reset()
 
     def reset(self):
@@ -99,10 +98,10 @@ class PolicyGradientAgent(agents.base_agent.RlAgent):
                 G = self.gamma * G + self.rewards[t]
                 action_t = self.actions[t]
                 theta_update = self.alpha * (G - self.base_line()) * self.policy.grad_log(self.states[t])[action_t]
-                # print("G = {}. Updating {} with {}".format(G, str(self.policy.theta), str(theta_update)))
                 self.policy.theta += theta_update
                 # For debugging
                 if 20 < abs(self.policy.theta[2]):
+                    print("G = {}. Updating {} with {}".format(G, str(self.policy.theta), str(theta_update)))
                     raise ValueError("Theta exploding: G {} s {} a {}".format(G, self.states[t], self.actions[t]))
             # Reset 3for the next episode
             self.reset()

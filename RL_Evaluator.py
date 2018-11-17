@@ -1,5 +1,3 @@
-
-# imports
 import numpy as np
 import matplotlib.pyplot as plt
 #%matplotlib inline
@@ -10,27 +8,18 @@ from agents.spot_agent import SpotEnvAgent
 from session_runner import SessionRunner
 
 
-# The environment
+
 env = SpotEnv()
 
-# The policy and the agent
-# agent = RandomAgent(env.action_space)
-agent = PolicyGradientAgent(env.observation_space, env.action_space, alpha=0.3)
+agent = PolicyGradientAgent(env.observation_space, env.action_space, alpha=0.05)
 
-# benchmark_agent = SpotEnvAgent(env)
-# Episode 1
-# [ 91.95142244 108.04857756]  # cos(0.75)
-# cash   0.00  asset   7.77 balance  776.90
-# 19.65338405623287
+agent = SpotEnvAgent(env)
 
 
-# evaluate
-nr_episodes = 20
+nr_episodes = 1
 
 runner = SessionRunner(env, agent)
 performance = runner.run_session(nr_episodes)
-
-
 
 
 def plot_performance():
@@ -60,3 +49,17 @@ def plot_pi():
 
 plot_pi()
 plot_performance()
+
+
+"""
+After training 1000 episodes, with MAX_STEPS=6283 and alpha=0.05 we find 
+total reward: 946.498510405275
+theta:        [ 91.58443278 107.65802878   2.30397928]
+
+For comparison, the benchmark agent
+total reward: 945.4199924697053
+theta:       [ 91.22417438 108.77582562]
+
+total reward: 975.8279175020341
+theta:       [ 92.68311131 107.31688869]
+"""

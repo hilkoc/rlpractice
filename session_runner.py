@@ -3,7 +3,7 @@ class SessionRunner(object):
     """ Runs sessions and episodes. A session is a number of episodes.
     An episode is a number of steps, from reset untill done. """
 
-    def __init__(self, env, agent, max_steps=5000):
+    def __init__(self, env, agent, max_steps=50000):
         self.env = env
         self.agent = agent
         self.max_turns_per_episode = max_steps
